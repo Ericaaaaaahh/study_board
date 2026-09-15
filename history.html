@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chronicle</title>
+  <style>
+    :root { --bg-theme: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80'); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background-image: var(--bg-theme); background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    
+    .container { width: 90vw; max-width: 900px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+    .card { background: #fcfbf9; border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    
+    h2 { color: #2b1f18; margin-bottom: 20px; text-align: center; }
+    .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; text-align: center; }
+    .day-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+    .chip { width: 38px; height: 38px; border-radius: 12px; background: #e5e0d8; transition: 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+    .day-slot:hover .chip { transform: scale(1.15); box-shadow: 0 5px 10px rgba(0,0,0,0.15); }
+    .chip.lvl-1 { background: #d2dbbe; } .chip.lvl-2 { background: #a7ad8a; } .chip.lvl-3 { background: #6e7a5b; } .chip.lvl-4 { background: #4a523a; }
+    
+    .log-area { font-size: 14px; margin-top: 20px; height: 300px; overflow-y: auto; }
+    .log-line { background: white; padding: 12px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+
+    /* 완벽 연결 하단 독 */
+    .bottom-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(35, 25, 20, 0.85); backdrop-filter: blur(10px); padding: 10px 15px; border-radius: 20px; display: flex; gap: 10px; z-index: 999; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+    .dock-btn { text-decoration: none; color: #aaa; font-family: -apple-system, sans-serif; font-size: 14px; padding: 8px 16px; border-radius: 12px; transition: 0.2s; background: transparent; border: none; cursor: pointer; }
+    .dock-btn.active, .dock-btn:hover { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card">
+      <h2 id="month-title">September 2026</h2>
+      <div class="grid" id="cal"></div>
+    </div>
+    <div class="card">
+      <h2 id="sel-date" style="color: #6e7a5b;">Select a Date</h2>
+      <div class="log-area" id="logs">
+        <p style="text-align:center; color:#aaa; margin-top:50px;">Click on a date to view your study logs.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-dock">
+    <a href="index_study.html" class="dock-btn">📌 Board</a>
+    <a href="grass.html" class="dock-btn">🌿 Archives</a>
+    <a href="history.html" class="dock-btn active">🗓️ Chronicle</a>
+    <a href="word_room.html" class="dock-btn">🏛️ Voca Room</a>
+  </div>
+
+  <script>
+    function renderCal() {
+      const data = JSON.parse(localStorage.getItem('history_db') || '{}');
+      const cal = document.getElementById('cal');
+      const today = new Date();
+      document.getElementById('month-title').innerText = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+      
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+
+      for(let i=1; i<=31; i++) {
+        // 간단한 날짜 처리 (월별 일수는 31로 고정하여 시뮬레이션)
+        const k = `${year}-${month}-${String(i).padStart(2,'0')}`;
+        const day = data[k] || { score: 0, list: [] };
+        
+        const slot = document.createElement('div');
+        slot.className = 'day-slot';
+        
+        let lvl = '';
+        if(day.score > 20) lvl = 'lvl-4';
+        else if(day.score > 10) lvl = 'lvl-3';
+        else if(day.score > 0) lvl = 'lvl-2';
+        
+        slot.innerHTML = `<div class="chip ${lvl}"></div><span style="font-size:12px;color:#777;font-weight:bold;">${i}</span>`;
+        slot.onclick = () => showLog(k, day.list);
+        cal.appendChild(slot);
+      }
+    }
+
+    function showLog(date, list) {
+      document.getElementById('sel-date').innerText = date;
+      const logs = document.getElementById('logs');
+      if(list.length === 0) { logs.innerHTML = '<p style="text-align:center; color:#aaa; margin-top:50px;">No study records for this day.</p>'; return; }
+      logs.innerHTML = list.map(l => `<div class="log-line"><span style="font-weight:500;">${l}</span> <span style="color:#6e7a5b; font-weight:bold;">+5</span></div>`).join('');
+    }
+
+    window.onload = renderCal;
+  </script>
+</body>
+</html>
