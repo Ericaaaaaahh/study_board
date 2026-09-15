@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voca Chamber</title>
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <style>
+    :root { --bg-theme: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80'); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background-image: var(--bg-theme); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+    
+    .hub { background: rgba(252, 251, 249, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; width: 90%; max-width: 400px; backdrop-filter: blur(10px); }
+    input { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; }
+    .btn { background: #5c3a21; color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; width: 100%; transition: 0.2s; }
+    .btn:hover { background: #4a2810; }
+    
+    #scene-container { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 100; }
+    .close-btn { position: absolute; top: 20px; right: 20px; background: rgba(139, 58, 58, 0.9); color: white; padding: 12px 24px; border: none; border-radius: 12px; z-index: 200; cursor: pointer; font-weight: bold; font-size: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    
+    .modal-3d { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: white; padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); z-index: 300; width: 320px; text-align: center; }
+    .modal-3d button { padding: 12px; margin-top: 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+
+    /* 완벽 연결 하단 독 */
+    .bottom-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(35, 25, 20, 0.85); backdrop-filter: blur(10px); padding: 10px 15px; border-radius: 20px; display: flex; gap: 10px; z-index: 999; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+    .dock-btn { text-decoration: none; color: #aaa; font-family: -apple-system, sans-serif; font-size: 14px; padding: 8px 16px; border-radius: 12px; transition: 0.2s; background: transparent; border: none; cursor: pointer; }
+    .dock-btn.active, .dock-btn:hover { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="hub" id="hub">
+    <h2 style="color:#2b1f18; margin-bottom: 25px;">Voca Archive</h2>
+    <input type="text" id="w-word" placeholder="Word (e.g. ubiquitous)">
+    <input type="text" id="w-mean" placeholder="Meaning (e.g. 어디에나 있는)">
+    <button class="btn" onclick="addWord()">Save to Archive</button>
+    <button class="btn" style="background:#4a523a; margin-top:20px;" onclick="enterRoom()">Enter 3D Chamber</button>
+  </div>
+
+  <div class="bottom-dock">
+    <a href="index_study.html" class="dock-btn">📌 Board</a>
+    <a href="grass.html" class="dock-btn">🌿 Archives</a>
+    <a href="history.html" class="dock-btn">🗓️ Chronicle</a>
+    <a href="word_room.html" class="dock-btn active">🏛️ Voca Room</a>
+  </div>
+
+  <div id="scene-container">
+    <button class="close-btn" onclick="exitRoom()">Leave Chamber</button>
+    
+    <div id="word-modal" class="modal-3d">
+      <h2 id="m-title" style="color:#5c3a21; font-size: 24px;"></h2>
+      <p id="m-desc" style="margin-top:15px; color:#555; font-size: 16px; line-height: 1.5;"></p>
+      <button style="background:#e8f5e9; color:#2e7d32;" onclick="closeWordModal()">Got it!</button>
+    </div>
+
+    <a-scene embedded style="width: 100%; height: 100%;">
+      <a-camera position="0 1.6 0"><a-cursor color="#4a523a"></a-cursor></a-camera>
+      <!-- 바닥과 천장 -->
+      <a-plane position="0 0 0" rotation="-90 0 0" width="12" height="12" color="#e5ded6"></a-plane>
+      <a-plane position="0 5 0" rotation="90 0 0" width="12" height="12" color="#faf8f5"></a-plane>
+      <!-- 4면 벽 -->
+      <a-plane position="0 2.5 -6" width="12" height="5" color="#faf8f5"></a-plane>
+      <a-plane position="0 2.5 6" rotation="0 180 0" width="12" height="5" color="#faf8f5"></a-plane>
+      <a-plane position="-6 2.5 0" rotation="0 90 0" width="12" height="5" color="#faf8f5"></a-plane>
+      <a-plane position="6 2.5 0" rotation="0 -90 0" width="12" height="5" color="#faf8f5"></a-plane>
+      
+      <a-entity id="walls"></a-entity>
+    </a-scene>
+  </div>
+
+  <script>
+    function getDB() { return JSON.parse(localStorage.getItem('voca_mem') || '[{"w":"Consistency","m":"일관성, 한결같음"}]'); }
+    function addWord() {
+      const w = document.getElementById('w-word').value;
+      const m = document.getElementById('w-mean').value;
+      if(!w || !m) return;
+      const db = getDB(); db.push({w,m});
+      localStorage.setItem('voca_mem', JSON.stringify(db));
+      document.getElementById('w-word').value = ''; document.getElementById('w-mean').value = '';
+      alert('Word securely archived! 🏛️');
+    }
+
+    function enterRoom() {
+      document.getElementById('hub').style.display = 'none';
+      document.getElementById('scene-container').style.display = 'block';
+      const walls = document.getElementById('walls');
+      walls.innerHTML = '';
+      
+      const db = getDB();
+      // 단어를 표시할 4면의 위치와 회전값 (조금 더 넓어진 방에 맞춤)
+      const positions = [{x:0, y:2.5, z:-5.9, r:"0 0 0"}, {x:0, y:2.5, z:5.9, r:"0 180 0"}, {x:-5.9, y:2.5, z:0, r:"0 90 0"}, {x:5.9, y:2.5, z:0, r:"0 -90 0"}];
+      
+      // 최신 4개 단어만 방에 배치
+      const recentWords = db.slice(-4).reverse();
+      
+      recentWords.forEach((item, i) => {
+        const p = positions[i];
+        const el = document.createElement('a-text');
+        el.setAttribute('value', item.w);
+        el.setAttribute('align', 'center');
+        el.setAttribute('color', '#2b1f18');
+        el.setAttribute('width', 10);
+        el.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
+        el.setAttribute('rotation', p.r);
+        el.setAttribute('class', 'clickable');
+        
+        el.addEventListener('click', () => {
+          document.getElementById('m-title').innerText = item.w;
+          document.getElementById('m-desc').innerText = item.m;
+          document.getElementById('word-modal').style.display = 'block';
+        });
+        walls.appendChild(el);
+      });
+    }
+
+    function exitRoom() {
+      document.getElementById('scene-container').style.display = 'none';
+      document.getElementById('hub').style.display = 'block';
+    }
+    function closeWordModal() { document.getElementById('word-modal').style.display = 'none'; }
+  </script>
+</body>
+</html>
